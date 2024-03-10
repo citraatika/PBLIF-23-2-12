@@ -1,0 +1,100 @@
+#include "HX711.h"
+
+#define DOUT  5
+#define CLK  4
+
+#define trig  8  //D1
+#define trig2 8  //D1
+#define trig3 8  //D1
+#define echo  9  //D2
+#define echo2 10  //D6
+#define echo3 11  //D7
+
+HX711 scale(DOUT, CLK);
+
+float calibration_factor = 50000; //Hasil Kalibrasi
+float units;
+
+long duration, duration2, duration3;
+float distance, distance2, distance3;
+
+String kirimdata;
+
+void setup() {
+  Serial.begin(9600);
+  Serial1.begin(9600);
+  scale.set_scale();
+  scale.tare();  //Reset the scale to 0
+
+  pinMode(trig, OUTPUT);
+  pinMode(trig2, OUTPUT);
+  pinMode(trig3, OUTPUT);
+  pinMode(echo, INPUT);
+  pinMode(echo2, INPUT);
+  pinMode(echo3, INPUT);
+
+  long zero_factor = scale.read_average(); //Get a baseline reading
+  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
+  Serial.println(zero_factor);
+}
+
+void loop() {
+  //Ultrasonic 1
+  digitalWrite (trig, LOW); delayMicroseconds (20000);
+  digitalWrite (trig, HIGH); delayMicroseconds (80000);
+  digitalWrite (trig, LOW);
+  duration = pulseIn (echo, HIGH);
+  distance = (duration/2)/29.1;
+  if(distance > 100) {
+    distance = 100.00;
+  }
+  Serial.print (distance);
+  Serial.print ("cm, ");
+
+
+  //Ultrasonic 2
+  digitalWrite (trig2, LOW); delayMicroseconds (20000);
+  digitalWrite (trig2, HIGH); delayMicroseconds (80000);
+  digitalWrite (trig2, LOW);
+  duration2 = pulseIn (echo2, HIGH);
+  distance2 = (duration2/2)/29.1;
+  if(distance2 > 100) {
+    distance2 = 100.00;
+  }
+  Serial.print (distance2);
+  Serial.print ("cm, ");
+  
+
+  //Ultrasonic 2
+  digitalWrite (trig3, LOW); delayMicroseconds (20000);
+  digitalWrite (trig3, HIGH); delayMicroseconds (80000);
+  digitalWrite (trig3, LOW);
+  duration3 = pulseIn (echo3, HIGH);
+  distance3 = (duration3/2)/29.1;
+  if(distance3 > 100) {
+    distance3 = 100.00;
+  }
+  Serial.print (distance3);
+  Serial.println ("cm.");
+
+
+  //LoadCell
+  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+
+  Serial.print("Reading: ");
+  units = scale.get_units(), 1;
+  if (units < 0)
+  {
+    units = 0.00;
+  }
+  Serial.print("Berat: ");
+  Serial.print(units);
+  Serial.print(" Kg");
+  Serial.println();
+
+  String kirimdata = ('#')+String(distance)+("cm")+(',')+String(distance2)+("cm")+(',')+String(distance3)+("cm")+(',')+String(units)+("kg");
+  Serial1.println(kirimdata);
+  Serial.println(kirimdata);
+  Serial.println("\n");
+  delay(10000);
+}

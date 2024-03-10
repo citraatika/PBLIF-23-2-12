@@ -1,0 +1,124 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+WiFiClient client;
+
+String dataIn;
+String dt[10];
+int i;
+boolean parsing = false;
+
+
+const char* ssid = "Polibatam WiFi";
+const char* password = "";
+
+const char* host = "10.170.2.12";
+HTTPClient http;
+
+void setup() {
+  Serial.begin(9600);
+  dataIn = "";
+  delay(10);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  Serial.print("Connecting to ");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+int value = 0;
+void loop() {
+  if (Serial.available() > 0) {
+    char inChar = (char)Serial.read();
+    dataIn += inChar;
+    if (inChar == '\n') { parsing = true; }
+  }
+  if (parsing) {
+    parsingData();
+    parsing = false;
+    dataIn = "";
+     ++value;
+
+    Serial.print("connecting to ");
+    Serial.println(host);
+
+    WiFiClient client;
+
+    if (!client.connect(host, 80)) {
+      Serial.println("connection failed");
+      //return;
+    }
+
+    // We now create a URI for the request
+    String url = "/pblwctt2/proses/sensor?data=";
+    url += dt[0].toFloat();
+    url += "&data2=";
+    url += dt[1].toFloat();
+    url += "&data3=";
+    url += dt[2].toFloat();
+    url += "&data4=";
+    url += dt[3].toFloat();
+
+    //url = "/pblwctt/proses/sensor?data2=";
+
+    Serial.print("Requesting URL: ");
+    Serial.println(url);
+
+    // This will send the request to the server
+    client.print(String("GET ") + url + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+    unsigned long timeout = millis();
+    while (client.available() == 0) {
+      if (millis() - timeout > 5000) {
+        Serial.println(">>> Client Timeout !");
+        client.stop();
+        return;
+      }
+    }
+
+    // Read all the lines of the reply from server and print them to Serial
+    while (client.available()) {
+      String line = client.readStringUntil('\r');
+      Serial.print(line);
+    }
+
+    Serial.println();
+    Serial.println("closing connection");
+  }
+}
+
+void parsingData() {
+  int j = 0;
+  Serial.print("Data masuk : ");
+  Serial.print(dataIn);
+
+  dt[j]="";
+
+  for(i=1;i<dataIn.length();i++){
+    if((dataIn[i] == ',')){
+      j++;
+      dt[j]="";
+    } else {
+      dt[j] = dt[j] + dataIn[i];
+    }
+  }
+  
+  Serial.print("data 1 : ");
+  Serial.println(dt[0].toFloat());
+  Serial.print("data 2 : ");
+  Serial.println(dt[1].toFloat());
+  Serial.print("data 3 : ");
+  Serial.println(dt[2].toFloat());
+  Serial.print("data 4: ");
+  Serial.println(dt[3].toFloat());
+  Serial.println("\n \n");
+  Serial.flush();
+}
